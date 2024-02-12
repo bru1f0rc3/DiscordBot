@@ -5,6 +5,14 @@ VisualStudioVersion = 17.8.34525.116
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp1", "ConsoleApp1\ConsoleApp1.csproj", "{6B0099A9-9560-4734-8C8D-206C96BB7538}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "js", "js", "{EF238393-D724-4416-BECF-2D2C6EFE9E52}"
+	ProjectSection(SolutionItems) = preProject
+		ConsoleApp1\js\config.json = ConsoleApp1\js\config.json
+		ConsoleApp1\js\index.js = ConsoleApp1\js\index.js
+		ConsoleApp1\js\package-lock.json = ConsoleApp1\js\package-lock.json
+		ConsoleApp1\js\package.json = ConsoleApp1\js\package.json
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
