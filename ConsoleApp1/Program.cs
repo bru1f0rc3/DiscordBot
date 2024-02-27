@@ -8,24 +8,19 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Discord;
 using Discord.WebSocket;
+using System.Linq;
 
 namespace ConsoleApp1
 {
     internal class Program
     {
         static DiscordSocketClient client;
+        static List<SocketTextChannel> textChannels;
+        static TimeZoneInfo moscowTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Russian Standard Time");
+        static List<string> lastCheckedMatchIds = new List<string>();
 
         static async Task Main()
         {
-            List<string> playerIds = await GetPlayerIdsFromLatestMatches();
-            List<string> playerNicknames = await GetPlayerNicknames(playerIds);
-
-            Console.WriteLine("Никнеймы игроков из матчей EGGWARS:");
-            foreach (string nickname in playerNicknames)
-            {
-                Console.WriteLine(nickname);
-            }
-
             client = new DiscordSocketClient();
 
             client.Ready += ClientReadyAsync;
@@ -35,53 +30,111 @@ namespace ConsoleApp1
             await client.LoginAsync(TokenType.Bot, token);
             await client.StartAsync();
 
-            await Task.Delay(-1);
+            while (true)
+            {
+                List<string> newMatchIds = await GetNewMatchIds();
+                if (newMatchIds.Count > 0)
+                {
+                    List<string> playerIds = await GetPlayerIdsFromMatches(newMatchIds);
+                    if (playerIds.Count > 0)
+                    {
+                        DateTimeOffset currentTime = DateTimeOffset.UtcNow;
+                        DateTimeOffset moscowTime = TimeZoneInfo.ConvertTime(currentTime, moscowTimeZone);
+
+                        string messageContent = $"Никнеймы игроков из новых матчей EGGWARS ({moscowTime}):";
+                        List<string> playerNicknames = await GetPlayerNicknames(playerIds);
+                        foreach (string nickname in playerNicknames)
+                        {
+                            messageContent += $"\n{nickname}";
+                        }
+
+                        foreach (var textChannel in textChannels)
+                        {
+                            await textChannel.SendMessageAsync(messageContent);
+                        }
+
+                        Console.WriteLine("Сообщение отправлено в Discord и выведено в консоли.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Не удалось получить никнеймы игроков.");
+                    }
+
+                    lastCheckedMatchIds.AddRange(newMatchIds);
+                }
+                else
+                {
+                    Console.WriteLine("Новые матчи не найдены.");
+                }
+                await Task.Delay(1000);
+            }
+        }
+
+        private static async Task<List<string>> GetNewMatchIds()
+        {
+            List<string> newMatchIds = new List<string>();
+
+            using (HttpClient client = new HttpClient())
+            {
+                DateTimeOffset currentTime = DateTimeOffset.UtcNow;
+                long unixTimestamp = currentTime.ToUnixTimeMilliseconds();
+
+                string vimeUrl = $"https://api.vimeworld.com/match/list?count=1&after={unixTimestamp}";
+                HttpResponseMessage response = await client.GetAsync(vimeUrl);
+                response.EnsureSuccessStatusCode();
+
+                string responseBody = await response.Content.ReadAsStringAsync();
+                JArray result = JArray.Parse(responseBody);
+
+                foreach (JObject match in result)
+                {
+                    JToken gameToken = match["game"];
+                    if (gameToken != null && gameToken.ToString() == "EGGWARS")
+                    {
+                        string matchId = match["id"].ToString();
+                        if (!lastCheckedMatchIds.Contains(matchId))
+                        {
+                            newMatchIds.Add(matchId);
+                        }
+                    }
+                }
+            }
+
+            return newMatchIds;
+        }
+
+        private static async Task<List<string>> GetPlayerIdsFromMatches(List<string> matchIds)
+        {
+            List<string> playerIds = new List<string>();
+
+            using (HttpClient client = new HttpClient())
+            {
+                foreach (string matchId in matchIds)
+                {
+                    string url = $"https://api.vimeworld.ru/match/{matchId}";
+                    HttpResponseMessage response = await client.GetAsync(url);
+                    response.EnsureSuccessStatusCode();
+
+                    string responseBody = await response.Content.ReadAsStringAsync();
+                    dynamic result = JsonConvert.DeserializeObject<dynamic>(responseBody);
+
+                    foreach (var team in result.teams)
+                    {
+                        foreach (var memberId in team.members)
+                        {
+                            playerIds.Add(memberId.ToString());
+                        }
+                    }
+                }
+            }
+
+            return playerIds;
         }
 
         private static async Task ClientReadyAsync()
         {
             var guild = client.GetGuild(1206137807043694632);
-
-            var textChannels = guild.TextChannels;
-
-            string messageContent = "Никнеймы игроков из матчей EGGWARS:\n";
-            List<string> playerIds = await GetPlayerIdsFromLatestMatches();
-            List<string> playerNicknames = await GetPlayerNicknames(playerIds);
-            foreach (string nickname in playerNicknames)
-            {
-                messageContent += $"{nickname}\n";
-            }
-
-            foreach (var textChannel in textChannels)
-            {
-                await textChannel.SendMessageAsync(messageContent);
-            }
-        }
-
-        private static async Task<List<string>> GetPlayerIdsFromLatestMatches()
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                string url = "https://api.vimeworld.ru/match/latest?count=100";
-                HttpResponseMessage response = await client.GetAsync(url);
-                response.EnsureSuccessStatusCode();
-
-                string responseBody = await response.Content.ReadAsStringAsync();
-                dynamic result = JsonConvert.DeserializeObject<dynamic>(responseBody);
-
-                List<string> playerIds = new List<string>();
-                foreach (var match in result)
-                {
-                    if (match.game.ToString() == "EGGWARS")
-                    {
-                        string matchId = match.id.ToString();
-                        List<string> matchPlayerIds = await GetPlayerIdsFromMatch(matchId);
-                        playerIds.AddRange(matchPlayerIds);
-                    }
-                }
-
-                return playerIds;
-            }
+            textChannels = guild.TextChannels.ToList();
         }
 
         private static async Task<List<string>> GetPlayerIdsFromMatch(string matchId)
