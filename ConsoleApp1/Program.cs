@@ -18,25 +18,25 @@ namespace ConsoleApp1
 
         static async Task Main()
         {
-            List<string> playerIds = await GetPlayerIdsFromLatestMatches();
-            List<string> playerNicknames = await GetPlayerNicknames(playerIds);
+                List<string> playerIds = await GetPlayerIdsFromLatestMatches();
+                List<string> playerNicknames = await GetPlayerNicknames(playerIds);
 
-            Console.WriteLine("Никнеймы игроков из матчей EGGWARS:");
-            foreach (string nickname in playerNicknames)
-            {
-                Console.WriteLine(nickname);
-            }
+                Console.WriteLine("Никнеймы игроков из матчей EGGWARS:");
+                foreach (string nickname in playerNicknames)
+                {
+                    Console.WriteLine(nickname);
+                }
 
-            client = new DiscordSocketClient();
+                client = new DiscordSocketClient();
 
-            client.Ready += ClientReadyAsync;
+                client.Ready += ClientReadyAsync;
 
-            var token = "MTIwNjEzODcwODY3MjM4NTAzNA.GH4-DE.lR7QgmAX1MbI5uneNX04DgfMY-k-Yobvz5RRVM";
+                var token = "MTIwNjEzODcwODY3MjM4NTAzNA.GH4-DE.lR7QgmAX1MbI5uneNX04DgfMY-k-Yobvz5RRVM";
 
-            await client.LoginAsync(TokenType.Bot, token);
-            await client.StartAsync();
+                await client.LoginAsync(TokenType.Bot, token);
+                await client.StartAsync();
 
-            await Task.Delay(-1);
+                await Task.Delay(-1);
         }
 
         private static async Task ClientReadyAsync()
@@ -50,7 +50,7 @@ namespace ConsoleApp1
             List<string> playerNicknames = await GetPlayerNicknames(playerIds);
             foreach (string nickname in playerNicknames)
             {
-                messageContent += $"{nickname}\n";
+                messageContent += $"```FIX\n{nickname}\n```";
             }
 
             foreach (var textChannel in textChannels)
