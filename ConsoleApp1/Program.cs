@@ -10,52 +10,54 @@ using Discord;
 using Discord.WebSocket;
 using System.Linq;
 
+// MTIwNjEzODcwODY3MjM4NTAzNA.GH4-DE.lR7QgmAX1MbI5uneNX04DgfMY-k-Yobvz5RRVM
+
 namespace ConsoleApp1
 {
     internal class Program
     {
         static DiscordSocketClient client;
+        static bool isFirstRun = true;
 
         static async Task Main()
         {
-                List<string> playerIds = await GetPlayerIdsFromLatestMatches();
-                List<string> playerNicknames = await GetPlayerNicknames(playerIds);
+            client = new DiscordSocketClient();
+            client.Log += LogAsync;
+            client.Ready += ClientReadyAsync;
 
-                Console.WriteLine("Никнеймы игроков из матчей EGGWARS:");
-                foreach (string nickname in playerNicknames)
-                {
-                    Console.WriteLine(nickname);
-                }
+            var token = "MTIwNjEzODcwODY3MjM4NTAzNA.GH4-DE.lR7QgmAX1MbI5uneNX04DgfMY-k-Yobvz5RRVM";
+            await client.LoginAsync(TokenType.Bot, token);
+            await client.StartAsync();
 
-                client = new DiscordSocketClient();
-
-                client.Ready += ClientReadyAsync;
-
-                var token = "MTIwNjEzODcwODY3MjM4NTAzNA.GH4-DE.lR7QgmAX1MbI5uneNX04DgfMY-k-Yobvz5RRVM";
-
-                await client.LoginAsync(TokenType.Bot, token);
-                await client.StartAsync();
-
-                await Task.Delay(-1);
+            await Task.Delay(-1);
         }
 
         private static async Task ClientReadyAsync()
         {
-            var guild = client.GetGuild(1206137807043694632);
-
-            var textChannels = guild.TextChannels;
-
-            string messageContent = "Никнеймы игроков из матчей EGGWARS:\n";
-            List<string> playerIds = await GetPlayerIdsFromLatestMatches();
-            List<string> playerNicknames = await GetPlayerNicknames(playerIds);
-            foreach (string nickname in playerNicknames)
+            while (true)
             {
-                messageContent += $"```FIX\n{nickname}\n```";
-            }
+                List<string> playerIds = await GetPlayerIdsFromLatestMatches();
+                List<string> playerNicknames = await GetPlayerNicknames(playerIds);
 
-            foreach (var textChannel in textChannels)
-            {
-                await textChannel.SendMessageAsync(messageContent);
+                if (!isFirstRun)
+                {
+                    string messageContent = "Никнеймы игроков из новых матчей EGGWARS:\n";
+                    foreach (string nickname in playerNicknames)
+                    {
+                        messageContent += $"```FIX\n{nickname}\n```";
+                    }
+
+                    var guild = client.GetGuild(1206137807043694632);
+                    var textChannels = guild.TextChannels;
+
+                    foreach (var textChannel in textChannels)
+                    {
+                        await textChannel.SendMessageAsync(messageContent);
+                    }
+                }
+
+                isFirstRun = false;
+                await Task.Delay(TimeSpan.FromMinutes(1));
             }
         }
 
@@ -133,6 +135,12 @@ namespace ConsoleApp1
 
                 return playerNicknames;
             }
+        }
+
+        private static Task LogAsync(LogMessage logMessage)
+        {
+            Console.WriteLine(logMessage.ToString());
+            return Task.CompletedTask;
         }
     }
 }
