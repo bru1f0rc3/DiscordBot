@@ -51,6 +51,23 @@ namespace ConsoleApp1
 
                     matchBluePlayers.AddRange(bluePlayerNicknames.Where(p => matchBluePlayers.Contains(p)));
                     matchRedPlayers.AddRange(redPlayerNicknames.Where(p => matchRedPlayers.Contains(p)));
+
+                    string blueTeamMessage = FormatPlayerList("blue", matchBluePlayers);
+                    string redTeamMessage = FormatPlayerList("red", matchRedPlayers);
+
+                    var guild = client.GetGuild(1206137807043694632);
+                    var textChannels = guild.TextChannels;
+
+                    foreach (var textChannel in textChannels)
+                    {
+                        await textChannel.SendMessageAsync($"Match ID: {matchId}");
+                        await textChannel.SendMessageAsync($"```FIX\n{blueTeamMessage}\n```");
+                        await textChannel.SendMessageAsync($"```md\n#{redTeamMessage}\n```");
+                    }
+
+                    // Очистка списков matchBluePlayers и matchRedPlayers
+                    matchBluePlayers.Clear();
+                    matchRedPlayers.Clear();
                 }
 
                 if (!isFirstRun)
@@ -80,7 +97,7 @@ namespace ConsoleApp1
 
                 isFirstRun = false;
 
-                await Task.Delay(TimeSpan.FromSeconds(30));
+                await Task.Delay(TimeSpan.FromSeconds(90));
             }
         }
 
@@ -185,9 +202,9 @@ namespace ConsoleApp1
                     response.EnsureSuccessStatusCode();
 
                     string responseBody = await response.Content.ReadAsStringAsync();
-                    dynamic result = JsonConvert.DeserializeObject<dynamic>(responseBody);
+                    dynamic result = JsonConvert.DeserializeObject(responseBody);
 
-                    if (result != null && result.HasValues && result[0] != null && result[0].username != null)
+                    if (result != null && result[0] != null && result[0].username != null)
                     {
                         string nickname = result[0].username.ToString();
                         playerNicknames.Add(nickname);
