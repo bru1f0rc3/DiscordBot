@@ -9,6 +9,7 @@ using Newtonsoft.Json.Linq;
 using Discord;
 using Discord.WebSocket;
 using System.Linq;
+using System.IO;
 
 namespace ConsoleApp1
 {
@@ -23,7 +24,9 @@ namespace ConsoleApp1
             client.Log += LogAsync;
             client.Ready += ClientReadyAsync;
 
-            var token = "";
+            string path = "tokens.txt";
+            string token = File.ReadAllText(path);
+
             await client.LoginAsync(TokenType.Bot, token);
             await client.StartAsync();
 
