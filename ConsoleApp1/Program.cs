@@ -22,7 +22,7 @@ namespace ConsoleApp1
         {
             client = new DiscordSocketClient();
             client.Log += LogAsync;
-            client.Ready += ClientReadyAsync; 
+            client.Ready += ClientReadyAsync;
 
             string path = "tokens.txt";
             string token = File.ReadAllText(path);
@@ -37,33 +37,46 @@ namespace ConsoleApp1
         {
             while (true)
             {
-                List<string> playerIds = await GetPlayerIdsFromLatestMatches();
-                List<string> playerNicknames = await GetPlayerNicknames(playerIds);
+                (List<string> bluePlayers, List<string> redPlayers) = await GetPlayerIdsFromLatestMatches();
+                List<string> bluePlayerNicknames = await GetPlayerNicknames(bluePlayers);
+                List<string> redPlayerNicknames = await GetPlayerNicknames(redPlayers);
 
                 if (!isFirstRun)
                 {
-                    string messageContent = "Никнеймы игроков из новых матчей EGGWARS:\n";
-                    foreach (string nickname in playerNicknames)
-                    {
-                        messageContent += $"```FIX\n{nickname}\n```";
-                    }
+                    string blueTeamMessage = FormatPlayerList("blue", bluePlayerNicknames);
+                    string redTeamMessage = FormatPlayerList("red", redPlayerNicknames);
 
                     var guild = client.GetGuild(1206137807043694632);
                     var textChannels = guild.TextChannels;
 
                     foreach (var textChannel in textChannels)
                     {
-                        await textChannel.SendMessageAsync(messageContent);
+                        await textChannel.SendMessageAsync(blueTeamMessage);
+                        await textChannel.SendMessageAsync(redTeamMessage);
                     }
                 }
 
                 isFirstRun = false;
-                await Task.Delay(TimeSpan.FromSeconds(90)); // 1:30 минуты
+                await Task.Delay(TimeSpan.FromSeconds(5)); // 1:30 minutes
             }
         }
 
-        private static async Task<List<string>> GetPlayerIdsFromLatestMatches()
+        private static string FormatPlayerList(string teamName, List<string> playerNicknames)
         {
+            string messageContent = $"Никнеймы игроков из новых матчей EGGWARS команды {teamName}:\n";
+            foreach (string nickname in playerNicknames)
+            {
+                messageContent += $"```FIX\n{nickname}\n```";
+            }
+
+            return messageContent;
+        }
+
+        private static async Task<(List<string>, List<string>)> GetPlayerIdsFromLatestMatches()
+        {
+            List<string> bluePlayers = new List<string>();
+            List<string> redPlayers = new List<string>();
+
             using (HttpClient client = new HttpClient())
             {
                 string url = "https://api.vimeworld.ru/match/latest?count=100";
@@ -73,23 +86,26 @@ namespace ConsoleApp1
                 string responseBody = await response.Content.ReadAsStringAsync();
                 dynamic result = JsonConvert.DeserializeObject<dynamic>(responseBody);
 
-                List<string> playerIds = new List<string>();
                 foreach (var match in result)
                 {
                     if (match.game.ToString() == "EGGWARS")
                     {
                         string matchId = match.id.ToString();
-                        List<string> matchPlayerIds = await GetPlayerIdsFromMatch(matchId);
-                        playerIds.AddRange(matchPlayerIds);
+                        (List<string> matchBluePlayers, List<string> matchRedPlayers) = await GetPlayerIdsFromMatch(matchId);
+                        bluePlayers.AddRange(matchBluePlayers);
+                        redPlayers.AddRange(matchRedPlayers);
                     }
                 }
-
-                return playerIds;
             }
+
+            return (bluePlayers, redPlayers);
         }
 
-        private static async Task<List<string>> GetPlayerIdsFromMatch(string matchId)
+        private static async Task<(List<string>, List<string>)> GetPlayerIdsFromMatch(string matchId)
         {
+            List<string> bluePlayers = new List<string>();
+            List<string> redPlayers = new List<string>();
+
             using (HttpClient client = new HttpClient())
             {
                 string url = $"https://api.vimeworld.ru/match/{matchId}";
@@ -99,17 +115,24 @@ namespace ConsoleApp1
                 string responseBody = await response.Content.ReadAsStringAsync();
                 dynamic result = JsonConvert.DeserializeObject<dynamic>(responseBody);
 
-                List<string> playerIds = new List<string>();
                 foreach (var team in result.teams)
                 {
                     foreach (var memberId in team.members)
                     {
-                        playerIds.Add(memberId.ToString());
+                        string playerId = memberId.ToString();
+                        if (team.id.ToString() == "blue")
+                        {
+                            bluePlayers.Add(playerId);
+                        }
+                        else if (team.id.ToString() == "red")
+                        {
+                            redPlayers.Add(playerId);
+                        }
                     }
                 }
-
-                return playerIds;
             }
+
+            return (bluePlayers, redPlayers);
         }
 
         private static async Task<List<string>> GetPlayerNicknames(List<string> playerIds)
@@ -128,10 +151,11 @@ namespace ConsoleApp1
                     string responseBody = await response.Content.ReadAsStringAsync();
                     dynamic result = JsonConvert.DeserializeObject<dynamic>(responseBody);
 
-                    await Task.Delay(25);
-
-                    string nickname = result[0].username.ToString();
-                    playerNicknames.Add(nickname);
+                    if (result != null && result.HasValues && result[0] != null && result[0].username != null)
+                    {
+                        string nickname = result[0].username.ToString();
+                        playerNicknames.Add(nickname);
+                    }
                 }
 
                 return playerNicknames;
