@@ -10,8 +10,6 @@ using Discord;
 using Discord.WebSocket;
 using System.Linq;
 
-// MTIwNjEzODcwODY3MjM4NTAzNA.GH4-DE.lR7QgmAX1MbI5uneNX04DgfMY-k-Yobvz5RRVM
-
 namespace ConsoleApp1
 {
     internal class Program
@@ -25,7 +23,7 @@ namespace ConsoleApp1
             client.Log += LogAsync;
             client.Ready += ClientReadyAsync;
 
-            var token = "MTIwNjEzODcwODY3MjM4NTAzNA.GH4-DE.lR7QgmAX1MbI5uneNX04DgfMY-k-Yobvz5RRVM";
+            var token = "";
             await client.LoginAsync(TokenType.Bot, token);
             await client.StartAsync();
 
@@ -57,7 +55,7 @@ namespace ConsoleApp1
                 }
 
                 isFirstRun = false;
-                await Task.Delay(TimeSpan.FromMinutes(1));
+                await Task.Delay(TimeSpan.FromSeconds(90)); // 1:30 минуты
             }
         }
 
