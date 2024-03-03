@@ -22,7 +22,7 @@ namespace ConsoleApp1
         {
             client = new DiscordSocketClient();
             client.Log += LogAsync;
-            client.Ready += ClientReadyAsync; // .
+            client.Ready += ClientReadyAsync; 
 
             string path = "tokens.txt";
             string token = File.ReadAllText(path);
